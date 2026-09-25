@@ -11,8 +11,13 @@ import '../../domain/enums/difficulty.dart';
 import '../../domain/repositories/word_repository.dart';
 
 class AssetWordRepository implements WordRepository {
-  AssetWordRepository({Random? random, WordPackValidator validator = const WordPackValidator(), AssetBundle? bundle})
-      : _random = random ?? Random(), _validator = validator, _bundle = bundle ?? rootBundle;
+  AssetWordRepository({
+    Random? random,
+    WordPackValidator validator = const WordPackValidator(),
+    AssetBundle? bundle,
+  }) : _random = random ?? Random(),
+       _validator = validator,
+       _bundle = bundle ?? rootBundle;
 
   final Random _random;
   final WordPackValidator _validator;
@@ -22,9 +27,12 @@ class AssetWordRepository implements WordRepository {
   bool _loaded = false;
   String? _error;
 
-  @override bool get isLoaded => _loaded;
-  @override String? get loadError => _error;
-  @override List<String> get recentWordIds => List.unmodifiable(_recent);
+  @override
+  bool get isLoaded => _loaded;
+  @override
+  String? get loadError => _error;
+  @override
+  List<String> get recentWordIds => List.unmodifiable(_recent);
 
   @override
   Future<void> load() async {
@@ -32,7 +40,9 @@ class AssetWordRepository implements WordRepository {
     try {
       final raw = await _bundle.loadString(GameConstants.wordAssetPath);
       final decoded = jsonDecode(raw) as List<dynamic>;
-      final entries = decoded.map((e) => WordEntry.fromJson(e as Map<String, dynamic>)).toList();
+      final entries = decoded
+          .map((e) => WordEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
       try {
         _validator.validate(entries, throwOnError: true);
       } on WordValidationException catch (e) {
@@ -56,12 +66,15 @@ class AssetWordRepository implements WordRepository {
   }
 
   @override
-  WordEntry randomWord(Difficulty difficulty) => randomWordExcluding(difficulty, const {});
+  WordEntry randomWord(Difficulty difficulty) =>
+      randomWordExcluding(difficulty, const {});
 
   @override
   WordEntry randomWordExcluding(Difficulty difficulty, Set<String> excludeIds) {
     _ensure();
-    var pool = wordsByDifficulty(difficulty).where((w) => !excludeIds.contains(w.id)).toList();
+    var pool = wordsByDifficulty(
+      difficulty,
+    ).where((w) => !excludeIds.contains(w.id)).toList();
     if (pool.isEmpty) pool = wordsByDifficulty(difficulty);
     if (pool.isEmpty) throw StateError('No words for ${difficulty.name}');
     return pool[_random.nextInt(pool.length)];
@@ -70,11 +83,15 @@ class AssetWordRepository implements WordRepository {
   @override
   WordEntry randomWordForRound(Difficulty difficulty) {
     _ensure();
-    var pool = wordsByDifficulty(difficulty).where((w) => !_recent.contains(w.id)).toList();
+    var pool = wordsByDifficulty(
+      difficulty,
+    ).where((w) => !_recent.contains(w.id)).toList();
     if (pool.isEmpty) {
       final remove = (_recent.length / 2).ceil().clamp(1, _recent.length);
       if (_recent.isNotEmpty) _recent.removeRange(0, remove);
-      pool = wordsByDifficulty(difficulty).where((w) => !_recent.contains(w.id)).toList();
+      pool = wordsByDifficulty(
+        difficulty,
+      ).where((w) => !_recent.contains(w.id)).toList();
     }
     if (pool.isEmpty) pool = wordsByDifficulty(difficulty);
     final word = pool[_random.nextInt(pool.length)];

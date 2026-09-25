@@ -15,8 +15,7 @@ class GameConstants {
   static int maxImpostersFor(int playerCount) {
     if (playerCount < minPlayers) return 0;
     final byRatio = playerCount ~/ 3;
-    final eligible =
-        (playerCount - protectedPositions).clamp(0, playerCount);
+    final eligible = (playerCount - protectedPositions).clamp(0, playerCount);
     return byRatio.clamp(0, eligible);
   }
 

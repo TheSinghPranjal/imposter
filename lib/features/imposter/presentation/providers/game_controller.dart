@@ -24,11 +24,11 @@ final settingsRepositoryProvider = Provider<SettingsRepository?>((ref) {
 
 final gameControllerProvider =
     StateNotifierProvider<GameController, GameSession>((ref) {
-  return GameController(
-    wordRepository: ref.watch(wordRepositoryProvider),
-    settingsRepository: ref.watch(settingsRepositoryProvider),
-  );
-});
+      return GameController(
+        wordRepository: ref.watch(wordRepositoryProvider),
+        settingsRepository: ref.watch(settingsRepositoryProvider),
+      );
+    });
 
 class GameController extends StateNotifier<GameSession> {
   GameController({
@@ -36,11 +36,11 @@ class GameController extends StateNotifier<GameSession> {
     SettingsRepository? settingsRepository,
     RoundGenerator? roundGenerator,
     Uuid? uuid,
-  })  : _words = wordRepository,
-        _settingsRepo = settingsRepository,
-        _generator = roundGenerator ?? RoundGenerator(),
-        _uuid = uuid ?? const Uuid(),
-        super(const GameSession());
+  }) : _words = wordRepository,
+       _settingsRepo = settingsRepository,
+       _generator = roundGenerator ?? RoundGenerator(),
+       _uuid = uuid ?? const Uuid(),
+       super(const GameSession());
 
   final WordRepository _words;
   final SettingsRepository? _settingsRepo;

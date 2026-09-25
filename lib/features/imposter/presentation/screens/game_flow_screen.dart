@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../domain/enums/game_phase.dart';
 import '../providers/game_controller.dart';
 import '../providers/game_session.dart';
 import '../widgets/secret_reveal_card.dart';
+import '../widgets/wood_sign.dart';
 
 class GameFlowScreen extends ConsumerStatefulWidget {
   const GameFlowScreen({super.key});
@@ -83,11 +85,14 @@ class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
           await _confirmExit();
         }
       },
-      // Home and player setup draw their own full-bleed artwork, so they skip
-      // the padded scaffold.
+      // These screens draw their own full-bleed artwork, so they skip the
+      // padded scaffold.
       child:
           session.phase == GamePhase.home ||
-              session.phase == GamePhase.playerSetup
+              session.phase == GamePhase.playerSetup ||
+              session.phase == GamePhase.configuration ||
+              session.phase.isRevealFlow ||
+              session.phase == GamePhase.allRevealed
           ? _buildBody(session, ctrl)
           : PartyScaffold(child: _buildBody(session, ctrl)),
     );
@@ -298,12 +303,6 @@ class _PlayerSetupView extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onBack;
 
-  static const _background = 'assets/images/players_background.png';
-  static const _imageSize = Size(857, 1835);
-
-  /// Bottom edge of the hanging "WHO'S PLAYING?" sign, in image pixels.
-  static const _signBottom = 385.0;
-
   static const _avatarColors = [
     AppColors.brightViolet,
     AppColors.coral,
@@ -316,19 +315,116 @@ class _PlayerSetupView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final players = session.players;
-    final media = MediaQuery.of(context);
-    final keyboard = media.viewInsets.bottom;
+    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     const ink = AppColors.deepPurple;
 
-    // The sign is baked into the artwork, so push content below wherever
-    // BoxFit.cover (top-aligned) ends up drawing it.
+    return _SignboardScaffold(
+      image: 'assets/images/players_background.png',
+      imageSize: const Size(857, 1835),
+      artBottom: 385,
+      onBack: onBack,
+      children: [
+        Center(
+          child: _Pill(
+            child: Text(
+              GameConstants.bestWithLabel,
+              style: AppTextStyles.label(ink),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _NameInput(
+          controller: nameController,
+          error: nameError,
+          onChanged: onChanged,
+          onAdd: onAdd,
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: players.isEmpty
+              ? Align(
+                  alignment: const Alignment(0, -0.3),
+                  child: _Pill(
+                    child: Text(
+                      'Add at least ${GameConstants.minPlayers} '
+                      'players to start.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.body(ink),
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  itemCount: players.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final p = players[i];
+                    return _PlayerTile(
+                      initials: p.initials,
+                      position: p.position,
+                      name: p.name,
+                      color: _avatarColors[i % _avatarColors.length],
+                      onRemove: () => onRemove(p.id),
+                    );
+                  },
+                ),
+        ),
+        if (!keyboardOpen) ...[
+          Center(
+            child: _Pill(
+              child: Text(
+                '${players.length} / ${GameConstants.maxPlayers} players',
+                style: AppTextStyles.label(ink),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          CandyButton(
+            label: 'CONTINUE',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: players.length >= GameConstants.minPlayers
+                ? onContinue
+                : null,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Full-bleed scene artwork with a title sign baked into its top, an optional
+/// floating back button, and content laid out below the artwork.
+class _SignboardScaffold extends StatelessWidget {
+  const _SignboardScaffold({
+    required this.image,
+    required this.imageSize,
+    required this.artBottom,
+    this.onBack,
+    required this.children,
+  });
+
+  final String image;
+  final Size imageSize;
+
+  /// Bottom edge of the baked-in artwork (sign, illustrations), in image
+  /// pixels. Content starts below it.
+  final double artBottom;
+  final VoidCallback? onBack;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+
+    // Push content below wherever BoxFit.cover (top-aligned) draws the art.
     final scale = math.max(
-      media.size.width / _imageSize.width,
-      media.size.height / _imageSize.height,
+      media.size.width / imageSize.width,
+      media.size.height / imageSize.height,
     );
     final contentTop = math.max(
-      _signBottom * scale + 8 - media.padding.top,
-      56.0,
+      artBottom * scale + 8 - media.padding.top,
+      onBack == null ? 0.0 : 56.0,
     );
 
     return Scaffold(
@@ -338,7 +434,7 @@ class _PlayerSetupView extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            _background,
+            image,
             fit: BoxFit.cover,
             alignment: Alignment.topCenter,
             errorBuilder: (_, _, _) => const DecoratedBox(
@@ -358,83 +454,21 @@ class _PlayerSetupView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    height: keyboard > 0 ? 56 : contentTop,
+                    height: keyboard > 0 && onBack != null ? 56 : contentTop,
                     child: Align(
                       alignment: Alignment.topLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: _RoundIconButton(
-                          icon: Icons.arrow_back_rounded,
-                          onPressed: onBack,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: _Pill(
-                      child: Text(
-                        GameConstants.bestWithLabel,
-                        style: AppTextStyles.label(ink),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _NameInput(
-                    controller: nameController,
-                    error: nameError,
-                    onChanged: onChanged,
-                    onAdd: onAdd,
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: players.isEmpty
-                        ? Align(
-                            alignment: const Alignment(0, -0.3),
-                            child: _Pill(
-                              child: Text(
-                                'Add at least ${GameConstants.minPlayers} '
-                                'players to start.',
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.body(ink),
+                      child: onBack == null
+                          ? null
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: _RoundIconButton(
+                                icon: Icons.arrow_back_rounded,
+                                onPressed: onBack!,
                               ),
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            itemCount: players.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, i) {
-                              final p = players[i];
-                              return _PlayerTile(
-                                initials: p.initials,
-                                position: p.position,
-                                name: p.name,
-                                color: _avatarColors[i % _avatarColors.length],
-                                onRemove: () => onRemove(p.id),
-                              );
-                            },
-                          ),
+                    ),
                   ),
-                  if (keyboard == 0) ...[
-                    Center(
-                      child: _Pill(
-                        child: Text(
-                          '${players.length} / ${GameConstants.maxPlayers} '
-                          'players',
-                          style: AppTextStyles.label(ink),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    CandyButton(
-                      label: 'CONTINUE',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: players.length >= GameConstants.minPlayers
-                          ? onContinue
-                          : null,
-                    ),
-                  ],
+                  ...children,
                 ],
               ),
             ),
@@ -447,16 +481,17 @@ class _PlayerSetupView extends StatelessWidget {
 
 /// Frosted white pill used for small labels over the artwork.
 class _Pill extends StatelessWidget {
-  const _Pill({required this.child});
+  const _Pill({required this.child, this.color});
 
   final Widget child;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: color ?? Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(AppRadii.xl),
         boxShadow: [
           BoxShadow(
@@ -657,101 +692,401 @@ class _ConfigurationView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final on = Theme.of(context).colorScheme.onSurface;
-    final maxImp = GameConstants.maxImpostersFor(session.players.length);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    const ink = AppColors.deepPurple;
+    final settings = session.settings;
+    final playerCount = session.players.length;
+    final maxImp = GameConstants.maxImpostersFor(playerCount);
+    final count = settings.imposterCount;
+
+    return _SignboardScaffold(
+      image: 'assets/images/ready_background.png',
+      imageSize: const Size(866, 1815),
+      artBottom: 445,
+      onBack: ctrl.editPlayers,
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: ctrl.editPlayers,
-              icon: const Icon(Icons.arrow_back_rounded),
+        Center(
+          child: _Pill(
+            color: const Color(0xFFE3F4FF).withValues(alpha: 0.9),
+            child: Text(
+              'Set the rules for this round.',
+              style: AppTextStyles.title(
+                const Color(0xFF1F4E9C),
+              ).copyWith(fontSize: 18),
             ),
-            Expanded(
-              child: Text('READY TO PLAY?', style: AppTextStyles.title(on)),
-            ),
-          ],
+          ),
         ),
-        Text(
-          'Set the rules for this round.',
-          style: AppTextStyles.body(on.withValues(alpha: 0.7)),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Difficulty',
-          style: AppTextStyles.label(on.withValues(alpha: 0.6)),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: Difficulty.values.map((d) {
-            final selected = session.settings.difficulty == d;
-            return ChoiceChip(
-              label: Text('${d.emoji} ${d.label}'),
-              selected: selected,
-              onSelected: (_) => ctrl.setDifficulty(d),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 20),
-        GlowCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Imposters', style: AppTextStyles.title(on)),
-                    Text(
-                      'Maximum for ${session.players.length} players: $maxImp',
-                      style: AppTextStyles.label(on.withValues(alpha: 0.55)),
+        const SizedBox(height: 12),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Difficulty',
+                    style: AppTextStyles.title(ink).copyWith(
+                      fontWeight: FontWeight.w900,
+                      shadows: const [
+                        Shadow(color: Colors.white70, blurRadius: 8),
+                      ],
                     ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    for (final d in Difficulty.values) ...[
+                      if (d != Difficulty.values.first)
+                        const SizedBox(width: 8),
+                      Expanded(
+                        child: _DifficultyTile(
+                          difficulty: d,
+                          selected: settings.difficulty == d,
+                          onTap: () => ctrl.setDifficulty(d),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-              IconButton(
-                onPressed: () =>
-                    ctrl.setImposterCount(session.settings.imposterCount - 1),
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              Text(
-                '${session.settings.imposterCount}',
-                style: AppTextStyles.headline(on),
-              ),
-              IconButton(
-                onPressed: () =>
-                    ctrl.setImposterCount(session.settings.imposterCount + 1),
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _SettingCard(
+                  emoji: '🕵️',
+                  title: 'Imposters',
+                  subtitle: 'Maximum for $playerCount players: $maxImp',
+                  trailing: _Stepper(
+                    value: count,
+                    onMinus: count > 1
+                        ? () => ctrl.setImposterCount(count - 1)
+                        : null,
+                    onPlus: count < maxImp
+                        ? () => ctrl.setImposterCount(count + 1)
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _SettingCard(
+                  emoji: '💡',
+                  title: 'Show hint to imposter',
+                  subtitle: 'A tiny clue — never the word itself.',
+                  onTap: () => ctrl.setShowHint(!settings.showHint),
+                  trailing: Switch(
+                    value: settings.showHint,
+                    onChanged: ctrl.setShowHint,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppColors.brightViolet,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: const Color(0xFF8E8AA3),
+                    trackOutlineColor: const WidgetStatePropertyAll(
+                      Colors.transparent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        GlowCard(
-          child: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(
-              'Show hint to imposter',
-              style: AppTextStyles.title(on),
-            ),
-            subtitle: Text(
-              'A tiny clue — never the word itself.',
-              style: AppTextStyles.body(on.withValues(alpha: 0.65)),
-            ),
-            value: session.settings.showHint,
-            onChanged: ctrl.setShowHint,
-          ),
+        CandyButton(
+          label: 'EDIT PLAYERS',
+          icon: Icons.groups_rounded,
+          style: CandyButtonStyle.cream,
+          onPressed: ctrl.editPlayers,
         ),
-        const Spacer(),
-        SecondaryButton(label: 'EDIT PLAYERS', onPressed: ctrl.editPlayers),
         const SizedBox(height: 12),
-        PrimaryButton(
+        CandyButton(
           label: 'CONTINUE',
           icon: Icons.casino_rounded,
           onPressed: ctrl.startRound,
         ),
       ],
+    );
+  }
+}
+
+class _DifficultyTile extends StatelessWidget {
+  const _DifficultyTile({
+    required this.difficulty,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Difficulty difficulty;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final (fill, dot, accent) = switch (difficulty) {
+      Difficulty.easy => (
+        const Color(0xFFE6FBEF),
+        const Color(0xFF22C55E),
+        const Color(0xFF34C77B),
+      ),
+      Difficulty.medium => (
+        const Color(0xFFFFF6E2),
+        const Color(0xFFFFC107),
+        const Color(0xFFF2B51C),
+      ),
+      Difficulty.hard => (
+        const Color(0xFFFFEAEA),
+        const Color(0xFFE53935),
+        const Color(0xFFE85A5A),
+      ),
+    };
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${difficulty.label} difficulty',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? accent : Colors.white,
+              width: selected ? 2.5 : 2,
+            ),
+            boxShadow: [
+              // Chunky bottom edge, like the candy buttons.
+              BoxShadow(
+                color: selected
+                    ? accent.withValues(alpha: 0.55)
+                    : const Color(0xFFD9CFC4),
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (selected) ...[
+                  Icon(Icons.check_rounded, size: 20, color: accent),
+                  const SizedBox(width: 4),
+                ],
+                _GlossyDot(color: dot),
+                const SizedBox(width: 8),
+                Text(
+                  difficulty.label,
+                  style: AppTextStyles.title(
+                    const Color(0xFF4A2A1A),
+                  ).copyWith(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlossyDot extends StatelessWidget {
+  const _GlossyDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          center: const Alignment(-0.35, -0.4),
+          radius: 0.9,
+          colors: [Color.lerp(color, Colors.white, 0.45)!, color],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.4),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cream card with a chunky bottom edge, an emoji badge and a control.
+class _SettingCard extends StatelessWidget {
+  const _SettingCard({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.onTap,
+  });
+
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = AppColors.deepPurple;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8EE),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: [
+            const BoxShadow(color: Color(0xFFE6D8C6), offset: Offset(0, 5)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFFFF1D6), Color(0xFFFCE1B8)],
+                ),
+                boxShadow: const [
+                  BoxShadow(color: Color(0xFFEBCB9C), offset: Offset(0, 3)),
+                ],
+              ),
+              child: Text(emoji, style: const TextStyle(fontSize: 32)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.title(
+                      ink,
+                    ).copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.body(
+                      ink.withValues(alpha: 0.6),
+                    ).copyWith(fontSize: 15, height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Stepper extends StatelessWidget {
+  const _Stepper({
+    required this.value,
+    required this.onMinus,
+    required this.onPlus,
+  });
+
+  final int value;
+  final VoidCallback? onMinus;
+  final VoidCallback? onPlus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1ECF7),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StepperButton(
+            icon: Icons.remove_rounded,
+            onPressed: onMinus,
+            filled: false,
+          ),
+          SizedBox(
+            width: 34,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.headline(
+                AppColors.deepPurple,
+              ).copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+          _StepperButton(
+            icon: Icons.add_rounded,
+            onPressed: onPlus,
+            filled: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({
+    required this.icon,
+    required this.onPressed,
+    required this.filled,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final bg = filled ? AppColors.brightViolet : const Color(0xFFD9CCFF);
+    final fg = filled ? Colors.white : AppColors.brightViolet;
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: Material(
+        color: bg,
+        shape: const CircleBorder(),
+        elevation: enabled && filled ? 2 : 0,
+        shadowColor: AppColors.brightViolet,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, color: fg, size: 24),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -762,94 +1097,332 @@ class _RevealView extends StatelessWidget {
   final GameSession session;
   final GameController ctrl;
 
+  /// Whether the "pass the phone" hand-off screen is showing, rather than the
+  /// secret card.
+  static bool showsPassPhone(GameSession session) =>
+      session.phase.isRevealFlow &&
+      session.currentPlayer != null &&
+      (session.privacyLocked || session.phase == GamePhase.passPhone);
+
   @override
   Widget build(BuildContext context) {
-    final on = Theme.of(context).colorScheme.onSurface;
     final player = session.currentPlayer;
     if (player == null) return const SizedBox.shrink();
     final haptics = HapticService(enabled: session.settings.hapticEnabled);
 
-    if (session.privacyLocked || session.phase == GamePhase.passPhone) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Spacer(),
-          Text(
-            session.privacyLocked
-                ? 'Screen hidden for privacy.'
-                : 'PASS THE PHONE',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.label(on.withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            session.privacyLocked
-                ? "Let's continue safely."
-                : 'Give the phone to',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body(on.withValues(alpha: 0.75)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            player.name.toUpperCase(),
-            textAlign: TextAlign.center,
-            style: AppTextStyles.display(on),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Only ${player.name} should look 👀',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body(on.withValues(alpha: 0.7)),
-          ),
-          const Spacer(),
-          PrimaryButton(
-            label: "I'M READY",
-            onPressed: session.privacyLocked
-                ? ctrl.unlockPrivacy
-                : ctrl.confirmReadyToReveal,
-          ),
-        ],
+    if (showsPassPhone(session)) {
+      return _PassPhoneView(
+        playerId: player.id,
+        playerName: player.name,
+        privacyLocked: session.privacyLocked,
+        animate: session.settings.animationsEnabled,
+        onReady: session.privacyLocked
+            ? ctrl.unlockPrivacy
+            : ctrl.confirmReadyToReveal,
       );
     }
 
     final assignment = session.currentAssignment;
     if (assignment == null) return const SizedBox.shrink();
+    final revealed = session.isCardRevealed;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _SignboardScaffold(
+      image: 'assets/images/your_turn_background.png',
+      imageSize: const Size(886, 1776),
+      artBottom: 0,
       children: [
-        Text(
-          'Your turn, ${player.name} 👀',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.title(on),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          session.isCardRevealed ? 'Your secret is ready 🤫' : 'Hold to reveal',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body(on.withValues(alpha: 0.7)),
+        const SizedBox(height: 28),
+        WoodSign(line1: 'Your turn,', line2: '${player.name} 👀'),
+        const SizedBox(height: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SparkBurst(),
+            const SizedBox(width: 8),
+            Flexible(
+              child: _Pill(
+                color: const Color(0xFFD9F1FF).withValues(alpha: 0.95),
+                child: Text(
+                  revealed ? 'Keep this secret 🤫' : 'Hold to reveal',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.title(
+                    const Color(0xFF1F4E9C),
+                  ).copyWith(fontSize: 19, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const SparkBurst(mirrored: true),
+          ],
         ),
         const SizedBox(height: 20),
-        SecretRevealCard(
-          playerName: player.name,
-          assignment: assignment,
-          isRevealed: session.isCardRevealed,
-          onReveal: ctrl.revealCurrentPlayer,
-          haptics: haptics,
-          animationsEnabled: session.settings.animationsEnabled,
-        ),
-        const Spacer(),
-        if (session.isCardRevealed)
-          PrimaryButton(
-            label: session.isLastPlayer ? 'START GAME' : 'PASS TO NEXT PLAYER',
-            onPressed: () {
-              if (session.isLastPlayer) {
-                ctrl.finishRevealPhase();
-              } else {
-                ctrl.passToNextPlayer();
-              }
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // Portrait card, as big as fits (with room for the glow).
+              final w = math.min(
+                box.maxWidth * 0.8,
+                (box.maxHeight - 16) / 1.2,
+              );
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: w,
+                  child: SecretRevealCard(
+                    playerName: player.name,
+                    assignment: assignment,
+                    isRevealed: revealed,
+                    onReveal: ctrl.revealCurrentPlayer,
+                    haptics: haptics,
+                    animationsEnabled: session.settings.animationsEnabled,
+                    height: w * 1.2,
+                  ),
+                ),
+              );
             },
           ),
+        ),
+        if (revealed) ...[
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: CandyButton(
+              label: session.isLastPlayer ? 'START GAME' : 'PASS TO NEXT',
+              icon: session.isLastPlayer ? Icons.play_arrow_rounded : null,
+              trailingIcon: session.isLastPlayer
+                  ? null
+                  : Icons.arrow_forward_rounded,
+              onPressed: session.isLastPlayer
+                  ? ctrl.finishRevealPhase
+                  : ctrl.passToNextPlayer,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _PassPhoneView extends StatelessWidget {
+  const _PassPhoneView({
+    required this.playerId,
+    required this.playerName,
+    required this.privacyLocked,
+    required this.animate,
+    required this.onReady,
+  });
+
+  final String playerId;
+  final String playerName;
+  final bool privacyLocked;
+  final bool animate;
+  final VoidCallback onReady;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = AppColors.deepPurple;
+    Widget card = _StitchedCard(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            privacyLocked ? 'Screen hidden for privacy.' : 'Give the phone to',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.title(
+              ink,
+            ).copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const SparkBurst(),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: _BigName(playerName.toUpperCase()),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const SparkBurst(mirrored: true),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _Pill(
+            color: const Color(0xFFE6DEFF),
+            child: Text(
+              privacyLocked
+                  ? "Let's continue safely 🔒"
+                  : 'Only $playerName should look 👀',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.label(ink).copyWith(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (animate) {
+      card = card
+          .animate(key: ValueKey(playerId))
+          .fadeIn(duration: 250.ms)
+          .scale(
+            begin: const Offset(0.85, 0.85),
+            duration: 500.ms,
+            curve: Curves.elasticOut,
+          );
+    }
+
+    return _SignboardScaffold(
+      image: 'assets/images/pass_phone_background.png',
+      imageSize: const Size(867, 1815),
+      // Below the paws handing over the phone.
+      artBottom: 1020,
+      children: [
+        Expanded(
+          child: Align(
+            alignment: const Alignment(0, -0.4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width - 64,
+                  child: card,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: CandyButton(
+            label: "I'M READY",
+            trailingIcon: Icons.arrow_forward_rounded,
+            onPressed: onReady,
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// Cream card with a dashed "stitched" inner border.
+class _StitchedCard extends StatelessWidget {
+  const _StitchedCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          const BoxShadow(color: Color(0xFFE6D8C6), offset: Offset(0, 5)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: const Color(0xFFD8C8B2),
+          radius: AppRadii.lg - 8,
+          inset: 8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+    required this.inset,
+  });
+
+  final Color color;
+  final double radius;
+  final double inset;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(inset),
+      Radius.circular(radius),
+    );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    const dash = 7.0, gap = 6.0;
+    for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += dash + gap) {
+        canvas.drawPath(metric.extractPath(d, d + dash), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.color != color || old.radius != radius || old.inset != inset;
+}
+
+/// Chunky violet name with a white outline, like the game's title lettering.
+class _BigName extends StatelessWidget {
+  const _BigName(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontFamily: 'Nunito',
+      fontSize: 64,
+      fontWeight: FontWeight.w900,
+      height: 1.1,
+      letterSpacing: 1,
+    );
+    return Stack(
+      children: [
+        // White outline with a soft violet drop shadow.
+        Text(
+          text,
+          style: style.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 8
+              ..strokeJoin = StrokeJoin.round
+              ..color = Colors.white,
+            shadows: [
+              Shadow(
+                color: AppColors.brightViolet.withValues(alpha: 0.35),
+                offset: const Offset(0, 4),
+                blurRadius: 6,
+              ),
+            ],
+          ),
+        ),
+        ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF9B6BFF), Color(0xFF5B21D6)],
+          ).createShader(bounds),
+          child: Text(text, style: style.copyWith(color: Colors.white)),
+        ),
       ],
     );
   }
@@ -861,24 +1434,83 @@ class _AllRevealedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final on = Theme.of(context).colorScheme.onSurface;
-    return Column(
+    final height = MediaQuery.of(context).size.height;
+    return _SignboardScaffold(
+      image: 'assets/images/your_turn_background.png',
+      imageSize: const Size(886, 1776),
+      artBottom: 0,
       children: [
-        const Spacer(),
-        Text(
-          'Everyone has seen their role.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.headline(on),
+        // The sign hangs a little way down, on long ropes.
+        SizedBox(height: height * 0.12),
+        const WoodSign(line1: 'Everyone', line2: 'has seen\ntheir role.'),
+        const SizedBox(height: 18),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SparkBurst(),
+            SizedBox(width: 8),
+            Flexible(child: _StitchedPill(text: 'Time to find the imposter.')),
+            SizedBox(width: 8),
+            SparkBurst(mirrored: true),
+          ],
         ),
-        const SizedBox(height: 12),
-        Text(
-          'Time to find the imposter.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body(on.withValues(alpha: 0.7)),
-        ),
         const Spacer(),
-        PrimaryButton(label: 'START GAME', onPressed: onContinue),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: CandyButton(
+            label: 'START GAME',
+            trailingIcon: Icons.arrow_forward_rounded,
+            onPressed: onContinue,
+          ),
+        ),
+        SizedBox(height: height * 0.06),
       ],
+    );
+  }
+}
+
+/// Small cream label with a dashed "stitched" edge.
+class _StitchedPill extends StatelessWidget {
+  const _StitchedPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          const BoxShadow(color: Color(0xFFE6D8C6), offset: Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: const _DashedBorderPainter(
+          color: Color(0xFFD8C8B2),
+          radius: AppRadii.md - 5,
+          inset: 5,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              maxLines: 1,
+              style: AppTextStyles.title(
+                AppColors.deepPurple,
+              ).copyWith(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

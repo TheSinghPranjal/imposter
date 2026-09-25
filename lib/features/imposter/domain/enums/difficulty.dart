@@ -4,16 +4,16 @@ enum Difficulty {
   hard;
 
   String get label => switch (this) {
-        Difficulty.easy => 'Easy',
-        Difficulty.medium => 'Medium',
-        Difficulty.hard => 'Difficult',
-      };
+    Difficulty.easy => 'Easy',
+    Difficulty.medium => 'Medium',
+    Difficulty.hard => 'Difficult',
+  };
 
   String get emoji => switch (this) {
-        Difficulty.easy => '🟢',
-        Difficulty.medium => '🟡',
-        Difficulty.hard => '🔴',
-      };
+    Difficulty.easy => '🟢',
+    Difficulty.medium => '🟡',
+    Difficulty.hard => '🔴',
+  };
 
   static Difficulty fromName(String value) {
     final v = value.toLowerCase();
