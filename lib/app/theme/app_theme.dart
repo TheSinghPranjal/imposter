@@ -39,7 +39,9 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: card,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -54,7 +56,9 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+          ),
           textStyle: AppTextStyles.title(Colors.white).copyWith(fontSize: 18),
         ),
       ),
@@ -63,7 +67,9 @@ class AppTheme {
           foregroundColor: text,
           side: BorderSide(color: text.withValues(alpha: 0.25)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+          ),
           textStyle: AppTextStyles.title(text).copyWith(fontSize: 16),
         ),
       ),

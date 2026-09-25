@@ -11,7 +11,9 @@ class FindTheImposterApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(gameControllerProvider.select((s) => s.settings.themeMode));
+    final mode = ref.watch(
+      gameControllerProvider.select((s) => s.settings.themeMode),
+    );
     return MaterialApp(
       title: 'Find the Imposter',
       debugShowCheckedModeBanner: false,
