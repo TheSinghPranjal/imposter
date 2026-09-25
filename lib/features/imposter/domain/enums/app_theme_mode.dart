@@ -4,8 +4,8 @@ enum AppThemeMode {
   dark;
 
   String get label => switch (this) {
-        AppThemeMode.system => 'System',
-        AppThemeMode.light => 'Light',
-        AppThemeMode.dark => 'Dark',
-      };
+    AppThemeMode.system => 'System',
+    AppThemeMode.light => 'Light',
+    AppThemeMode.dark => 'Dark',
+  };
 }

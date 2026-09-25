@@ -32,44 +32,44 @@ class AppRadii {
 
 class AppTextStyles {
   static TextStyle display(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 40,
-        fontWeight: FontWeight.w900,
-        height: 1.05,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 40,
+    fontWeight: FontWeight.w900,
+    height: 1.05,
+    color: c,
+  );
   static TextStyle headline(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 28,
-        fontWeight: FontWeight.w800,
-        height: 1.15,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    height: 1.15,
+    color: c,
+  );
   static TextStyle title(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: c,
+  );
   static TextStyle body(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        height: 1.4,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    color: c,
+  );
   static TextStyle label(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.4,
+    color: c,
+  );
   static TextStyle secret(Color c) => TextStyle(
-        fontFamily: 'Nunito',
-        fontSize: 40,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1.5,
-        color: c,
-      );
+    fontFamily: 'Nunito',
+    fontSize: 40,
+    fontWeight: FontWeight.w900,
+    letterSpacing: 1.5,
+    color: c,
+  );
 }
