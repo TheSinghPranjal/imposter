@@ -7,10 +7,16 @@ import '../../../../core/widgets/party_widgets.dart';
 /// Hanging wooden sign drawn in code, for titles that change at runtime
 /// (like a player's name). Matches the signs baked into the scene artwork.
 class WoodSign extends StatelessWidget {
-  const WoodSign({super.key, required this.line1, required this.line2});
+  const WoodSign({
+    super.key,
+    required this.line1,
+    required this.line2,
+    this.line1Size = 36,
+  });
 
   /// Small white top line, e.g. "Your turn,".
   final String line1;
+  final double line1Size;
 
   /// Big yellow bottom line, e.g. the player's name. May contain line breaks.
   final String line2;
@@ -44,13 +50,17 @@ class WoodSign extends StatelessWidget {
                 angle: -0.02,
                 child: SizedBox(
                   width: double.infinity,
-                  child: _Plank(line1: line1, line2: line2),
+                  child: _Plank(
+                    line1: line1,
+                    line2: line2,
+                    line1Size: line1Size,
+                  ),
                 ),
               ),
               // Leaf clusters where the ropes meet the plank.
               for (final (x, flip) in const [(0.16, false), (0.84, true)])
                 Positioned.fill(
-                  top: -18,
+                  top: -28,
                   bottom: null,
                   child: Align(
                     alignment: Alignment(x * 2 - 1, 0),
@@ -74,18 +84,134 @@ class WoodSign extends StatelessWidget {
 }
 
 class _Plank extends StatelessWidget {
-  const _Plank({required this.line1, required this.line2});
+  const _Plank({
+    required this.line1,
+    required this.line2,
+    required this.line1Size,
+  });
 
   final String line1;
   final String line2;
+  final double line1Size;
 
-  static const _outline = Color(0xFF5E3212);
+  @override
+  Widget build(BuildContext context) {
+    return _WoodSurface(
+      radius: 20,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: _OutlinedText(
+              line1,
+              fontSize: line1Size,
+              fill: const LinearGradient(
+                colors: [Colors.white, Color(0xFFF3ECE4)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: _OutlinedText(
+              line2,
+              fontSize: 48,
+              fill: const LinearGradient(
+                colors: [Color(0xFFFFEE7A), Color(0xFFFFB300)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small wooden strip with one line of white text and leafy corners.
+class WoodBanner extends StatelessWidget {
+  const WoodBanner({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _WoodSurface(
+          radius: 10,
+          depth: 4,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              maxLines: 1,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                shadows: [
+                  Shadow(color: _outline, offset: Offset(0, 2)),
+                  Shadow(color: _outline, blurRadius: 3),
+                ],
+              ),
+            ),
+          ),
+        ),
+        for (final (align, flip) in const [
+          (Alignment.bottomLeft, false),
+          (Alignment.topRight, true),
+        ])
+          Positioned.fill(
+            left: -14,
+            right: -14,
+            top: -14,
+            bottom: -14,
+            child: Align(
+              alignment: align,
+              child: Transform.flip(
+                flipX: flip,
+                flipY: !flip,
+                child: const CustomPaint(
+                  size: Size(44, 28),
+                  painter: _LeavesPainter(),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+const _outline = Color(0xFF5E3212);
+
+/// Painted wood: outline, warm gradient, grain, chunky bottom edge.
+class _WoodSurface extends StatelessWidget {
+  const _WoodSurface({
+    required this.child,
+    required this.radius,
+    required this.padding,
+    this.depth = 6,
+  });
+
+  final Widget child;
+  final double radius;
+  final EdgeInsets padding;
+  final double depth;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: _outline, width: 3),
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
@@ -93,50 +219,19 @@ class _Plank extends StatelessWidget {
           colors: [Color(0xFFD08A48), Color(0xFFB86D30), Color(0xFF9A5623)],
         ),
         boxShadow: [
-          const BoxShadow(color: _outline, offset: Offset(0, 6)),
+          BoxShadow(color: _outline, offset: Offset(0, depth)),
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 14,
-            offset: const Offset(0, 12),
+            offset: Offset(0, depth * 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(radius - 3),
         child: CustomPaint(
           painter: const _GrainPainter(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: _OutlinedText(
-                    line1,
-                    fontSize: 36,
-                    fill: const LinearGradient(
-                      colors: [Colors.white, Color(0xFFF3ECE4)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: _OutlinedText(
-                    line2,
-                    fontSize: 48,
-                    fill: const LinearGradient(
-                      colors: [Color(0xFFFFEE7A), Color(0xFFFFB300)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: Padding(padding: padding, child: child),
         ),
       ),
     );
@@ -169,7 +264,7 @@ class _OutlinedText extends StatelessWidget {
               ..style = PaintingStyle.stroke
               ..strokeWidth = fontSize * 0.16
               ..strokeJoin = StrokeJoin.round
-              ..color = _Plank._outline,
+              ..color = _outline,
             shadows: const [
               Shadow(color: Color(0x805E3212), offset: Offset(0, 4)),
             ],

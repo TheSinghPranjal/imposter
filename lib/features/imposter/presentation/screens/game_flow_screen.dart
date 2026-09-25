@@ -92,7 +92,8 @@ class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
               session.phase == GamePhase.playerSetup ||
               session.phase == GamePhase.configuration ||
               session.phase.isRevealFlow ||
-              session.phase == GamePhase.allRevealed
+              session.phase == GamePhase.allRevealed ||
+              session.phase == GamePhase.roundReady
           ? _buildBody(session, ctrl)
           : PartyScaffold(child: _buildBody(session, ctrl)),
     );
@@ -1469,7 +1470,8 @@ class _AllRevealedView extends StatelessWidget {
   }
 }
 
-/// Small cream label with a dashed "stitched" edge.
+/// Small cream label with a dashed "stitched" edge. Shrinks to fit; use
+/// line breaks in [text] for multiple lines.
 class _StitchedPill extends StatelessWidget {
   const _StitchedPill({required this.text});
 
@@ -1503,7 +1505,7 @@ class _StitchedPill extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               text,
-              maxLines: 1,
+              textAlign: TextAlign.center,
               style: AppTextStyles.title(
                 AppColors.deepPurple,
               ).copyWith(fontSize: 18, fontWeight: FontWeight.w900),
@@ -1528,56 +1530,145 @@ class _RoundReadyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final on = Theme.of(context).colorScheme.onSurface;
     final starter = session.startingPlayer;
-    return Column(
+    final size = MediaQuery.of(context).size;
+    return _SignboardScaffold(
+      image: 'assets/images/round_background.png',
+      imageSize: const Size(871, 1805),
+      artBottom: 0,
       children: [
-        const Spacer(),
-        const Text('🎉', style: TextStyle(fontSize: 48)),
-        const SizedBox(height: 8),
-        Text(
-          "EVERYONE'S READY",
-          style: AppTextStyles.label(on.withValues(alpha: 0.6)),
-        ),
-        Text(
-          'THE ROUND BEGINS NOW',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.headline(on),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Give clues. Listen carefully.\nFind the imposter.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body(on.withValues(alpha: 0.7)),
-        ),
-        const SizedBox(height: 28),
-        GlowCard(
-          child: Column(
-            children: [
-              Text(
-                'STARTING PLAYER',
-                style: AppTextStyles.label(AppColors.warmYellow),
+        Expanded(
+          // Everything above the buttons shrinks together on short screens.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: size.width - 40,
+              child: Column(
+                children: [
+                  SizedBox(height: size.height * 0.02),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SparkBurst(),
+                      SizedBox(width: 10),
+                      Text('🎉', style: TextStyle(fontSize: 56)),
+                      SizedBox(width: 10),
+                      SparkBurst(mirrored: true),
+                    ],
+                  ),
+                  const WoodSign(
+                    line1: "EVERYONE'S READY",
+                    line2: 'THE ROUND\nBEGINS NOW',
+                    line1Size: 26,
+                  ),
+                  const SizedBox(height: 18),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SparkBurst(),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: _StitchedPill(
+                          text:
+                              'Give clues. Listen carefully.\n'
+                              'Find the imposter.',
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      SparkBurst(mirrored: true),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  _StarterCard(name: starter?.name ?? '?'),
+                  const SizedBox(height: 16),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: WoodBanner(
+                      text: 'Put the phone down and start talking!',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                '🗣️  ${starter?.name ?? "?"} starts!',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.headline(on),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Put the phone down and start talking!',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body(on.withValues(alpha: 0.65)),
-        ),
-        const Spacer(),
-        PrimaryButton(label: 'AGAIN! 🔥', onPressed: onNext),
         const SizedBox(height: 12),
-        SecondaryButton(label: 'HOME', onPressed: onHome),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: CandyButton(label: 'AGAIN! 🔥', onPressed: onNext),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: CandyButton(
+            label: 'HOME',
+            style: CandyButtonStyle.secondary,
+            onPressed: onHome,
+          ),
+        ),
+        SizedBox(height: size.height * 0.02),
       ],
+    );
+  }
+}
+
+class _StarterCard extends StatelessWidget {
+  const _StarterCard({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EC),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          const BoxShadow(color: Color(0xFFE6D8C6), offset: Offset(0, 6)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'STARTING PLAYER',
+            style: AppTextStyles.label(const Color(0xFFF2A516)).copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const SparkBurst(),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '🗣️ $name starts!',
+                    maxLines: 1,
+                    style: AppTextStyles.display(
+                      AppColors.deepPurple,
+                    ).copyWith(fontSize: 38),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const SparkBurst(mirrored: true),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
