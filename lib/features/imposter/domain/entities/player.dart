@@ -23,12 +23,7 @@ class Player extends Equatable {
     return ('${parts.first[0]}${parts.last[0]}').toUpperCase();
   }
 
-  Player copyWith({
-    String? id,
-    String? name,
-    int? position,
-    bool? isActive,
-  }) {
+  Player copyWith({String? id, String? name, int? position, bool? isActive}) {
     return Player(
       id: id ?? this.id,
       name: name ?? this.name,

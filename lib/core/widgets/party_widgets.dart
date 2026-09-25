@@ -166,7 +166,7 @@ class FloatingMarks extends StatelessWidget {
   }
 }
 
-enum CandyButtonStyle { primary, secondary }
+enum CandyButtonStyle { primary, secondary, cream }
 
 /// Chunky, glossy pill button used on the home screen.
 class CandyButton extends StatefulWidget {
@@ -175,12 +175,16 @@ class CandyButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.trailingIcon,
     this.style = CandyButtonStyle.primary,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+
+  /// Shown at the right end inside a darker circle, e.g. a forward arrow.
+  final IconData? trailingIcon;
   final CandyButtonStyle style;
 
   @override
@@ -201,10 +205,28 @@ class _CandyButtonState extends State<CandyButton> {
     final depth = primary ? 6.0 : 5.0;
     final radius = BorderRadius.circular(height / 2);
 
-    final face = primary
-        ? const [Color(0xFFA56BFF), Color(0xFF7B3CF0), Color(0xFF6A2BE0)]
-        : const [Color(0xFFFFFFFF), Color(0xFFF7F3F8), Color(0xFFECE6EE)];
-    final base = primary ? const Color(0xFF4B1AA8) : const Color(0xFFCFC6D6);
+    final face = switch (widget.style) {
+      CandyButtonStyle.primary => const [
+        Color(0xFFA56BFF),
+        Color(0xFF7B3CF0),
+        Color(0xFF6A2BE0),
+      ],
+      CandyButtonStyle.secondary => const [
+        Color(0xFFFFFFFF),
+        Color(0xFFF7F3F8),
+        Color(0xFFECE6EE),
+      ],
+      CandyButtonStyle.cream => const [
+        Color(0xFFFFFBF0),
+        Color(0xFFFFF3DC),
+        Color(0xFFFCE9C6),
+      ],
+    };
+    final base = switch (widget.style) {
+      CandyButtonStyle.primary => const Color(0xFF4B1AA8),
+      CandyButtonStyle.secondary => const Color(0xFFCFC6D6),
+      CandyButtonStyle.cream => const Color(0xFFE2C48F),
+    };
     final rim = primary ? const Color(0xFFD9C4FF) : const Color(0xFFFFFFFF);
     final fg = primary ? Colors.white : AppColors.deepPurple;
     final offset = _pressed ? depth - 2 : 0.0;
@@ -285,43 +307,77 @@ class _CandyButtonState extends State<CandyButton> {
                             ),
                           ),
                         ),
-                        Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (widget.icon != null) ...[
-                                Icon(
-                                  widget.icon,
-                                  size: primary ? 34 : 26,
-                                  color: fg,
-                                ),
-                                SizedBox(width: primary ? 18 : 14),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  widget.label,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontFamily: 'Nunito',
-                                    fontSize: primary ? 24 : 19,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.8,
+                        // Keep the label clear of the trailing circle, and
+                        // pad both sides so it stays centred.
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: widget.trailingIcon != null
+                                ? height - 4
+                                : 16,
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.icon != null) ...[
+                                  Icon(
+                                    widget.icon,
+                                    size: primary ? 34 : 26,
                                     color: fg,
-                                    shadows: primary
-                                        ? const [
-                                            Shadow(
-                                              color: Color(0x664B1AA8),
-                                              offset: Offset(0, 2),
-                                              blurRadius: 2,
-                                            ),
-                                          ]
-                                        : null,
+                                  ),
+                                  SizedBox(width: primary ? 18 : 14),
+                                ],
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      widget.label,
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontFamily: 'Nunito',
+                                        fontSize: primary ? 24 : 19,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.8,
+                                        color: fg,
+                                        shadows: primary
+                                            ? const [
+                                                Shadow(
+                                                  color: Color(0x664B1AA8),
+                                                  offset: Offset(0, 2),
+                                                  blurRadius: 2,
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
+                        if (widget.trailingIcon != null)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            bottom: 8,
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: primary
+                                      ? const Color(0x33200060)
+                                      : base.withValues(alpha: 0.35),
+                                ),
+                                child: Icon(
+                                  widget.trailingIcon,
+                                  color: fg,
+                                  size: height * 0.45,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -333,4 +389,53 @@ class _CandyButtonState extends State<CandyButton> {
       ),
     );
   }
+}
+
+/// Three little yellow "excitement" dashes, drawn beside titles.
+class SparkBurst extends StatelessWidget {
+  const SparkBurst({super.key, this.mirrored = false});
+
+  final bool mirrored;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.flip(
+      flipX: mirrored,
+      child: const CustomPaint(
+        size: Size(26, 44),
+        painter: _SparkBurstPainter(),
+      ),
+    );
+  }
+}
+
+class _SparkBurstPainter extends CustomPainter {
+  const _SparkBurstPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.warmYellow
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    final w = size.width, h = size.height;
+    canvas.drawLine(
+      Offset(w * 0.35, h * 0.12),
+      Offset(w * 0.8, h * 0.3),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.15, h * 0.5),
+      Offset(w * 0.75, h * 0.5),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.35, h * 0.88),
+      Offset(w * 0.8, h * 0.7),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SparkBurstPainter old) => false;
 }

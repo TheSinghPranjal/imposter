@@ -49,15 +49,15 @@ class GameSettings extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'difficulty': difficulty.name,
-        'imposterCount': imposterCount,
-        'showHint': showHint,
-        'themeMode': themeMode.name,
-        'soundEnabled': soundEnabled,
-        'hapticEnabled': hapticEnabled,
-        'animationsEnabled': animationsEnabled,
-        'allowDuplicateNames': allowDuplicateNames,
-      };
+    'difficulty': difficulty.name,
+    'imposterCount': imposterCount,
+    'showHint': showHint,
+    'themeMode': themeMode.name,
+    'soundEnabled': soundEnabled,
+    'hapticEnabled': hapticEnabled,
+    'animationsEnabled': animationsEnabled,
+    'allowDuplicateNames': allowDuplicateNames,
+  };
 
   factory GameSettings.fromJson(Map<String, dynamic> json) {
     return GameSettings(
@@ -77,13 +77,13 @@ class GameSettings extends Equatable {
 
   @override
   List<Object?> get props => [
-        difficulty,
-        imposterCount,
-        showHint,
-        themeMode,
-        soundEnabled,
-        hapticEnabled,
-        animationsEnabled,
-        allowDuplicateNames,
-      ];
+    difficulty,
+    imposterCount,
+    showHint,
+    themeMode,
+    soundEnabled,
+    hapticEnabled,
+    animationsEnabled,
+    allowDuplicateNames,
+  ];
 }

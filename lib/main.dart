@@ -12,15 +12,15 @@ Future<void> main() async {
   final settingsRepo = SettingsRepository(prefs);
 
   final container = ProviderContainer(
-    overrides: [
-      settingsRepositoryProvider.overrideWithValue(settingsRepo),
-    ],
+    overrides: [settingsRepositoryProvider.overrideWithValue(settingsRepo)],
   );
 
   await container.read(gameControllerProvider.notifier).bootstrap();
 
-  runApp(UncontrolledProviderScope(
-    container: container,
-    child: const FindTheImposterApp(),
-  ));
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const FindTheImposterApp(),
+    ),
+  );
 }

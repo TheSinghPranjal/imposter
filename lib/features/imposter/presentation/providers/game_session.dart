@@ -33,7 +33,9 @@ class GameSession extends Equatable {
 
   Player? get currentPlayer {
     if (players.isEmpty) return null;
-    if (currentPlayerIndex < 0 || currentPlayerIndex >= players.length) return null;
+    if (currentPlayerIndex < 0 || currentPlayerIndex >= players.length) {
+      return null;
+    }
     return players[currentPlayerIndex];
   }
 
@@ -79,7 +81,15 @@ class GameSession extends Equatable {
 
   @override
   List<Object?> get props => [
-        phase, players, settings, round?.id, currentPlayerIndex,
-        isCardRevealed, isHolding, privacyLocked, errorMessage, wordsReady,
-      ];
+    phase,
+    players,
+    settings,
+    round?.id,
+    currentPlayerIndex,
+    isCardRevealed,
+    isHolding,
+    privacyLocked,
+    errorMessage,
+    wordsReady,
+  ];
 }
