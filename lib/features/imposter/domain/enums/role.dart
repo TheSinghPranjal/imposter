@@ -1,1 +1,6 @@
-enum Role { civilian, imposter; bool get isImposter => this == Role.imposter; }
+enum Role {
+  civilian,
+  imposter;
+
+  bool get isImposter => this == Role.imposter;
+}

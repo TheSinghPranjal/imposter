@@ -14,7 +14,10 @@ class RoundGenerator {
 
   List<int> eligibleImposterPositions(int playerCount) {
     if (playerCount < GameConstants.minPlayers) return const [];
-    return [for (var i = GameConstants.protectedPositions + 1; i <= playerCount; i++) i];
+    return [
+      for (var i = GameConstants.protectedPositions + 1; i <= playerCount; i++)
+        i,
+    ];
   }
 
   int clampImposterCount(int requested, int playerCount) {
@@ -23,11 +26,19 @@ class RoundGenerator {
     return requested.clamp(1, max);
   }
 
-  List<String> selectImposterIds({required List<Player> players, required int imposterCount}) {
-    final sorted = [...players]..sort((a, b) => a.position.compareTo(b.position));
-    final eligible = sorted.where((p) => p.position > GameConstants.protectedPositions).toList();
+  List<String> selectImposterIds({
+    required List<Player> players,
+    required int imposterCount,
+  }) {
+    final sorted = [...players]
+      ..sort((a, b) => a.position.compareTo(b.position));
+    final eligible = sorted
+        .where((p) => p.position > GameConstants.protectedPositions)
+        .toList();
     final count = clampImposterCount(imposterCount, players.length);
-    if (count > eligible.length) throw StateError('Not enough eligible imposter positions.');
+    if (count > eligible.length) {
+      throw StateError('Not enough eligible imposter positions.');
+    }
     final pool = [...eligible]..shuffle(_random);
     return pool.take(count).map((p) => p.id).toList();
   }
@@ -63,9 +74,15 @@ class RoundGenerator {
     required int imposterCount,
     required bool showHint,
   }) {
-    final imposters = selectImposterIds(players: players, imposterCount: imposterCount);
+    final imposters = selectImposterIds(
+      players: players,
+      imposterCount: imposterCount,
+    );
     final assignments = buildAssignments(
-      players: players, imposterIds: imposters, secretWord: secretWord, showHint: showHint,
+      players: players,
+      imposterIds: imposters,
+      secretWord: secretWord,
+      showHint: showHint,
     );
     return Round(
       id: roundId,
