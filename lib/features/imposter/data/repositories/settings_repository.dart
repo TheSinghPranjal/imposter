@@ -10,8 +10,11 @@ class SettingsRepository {
   GameSettings load() {
     final raw = _prefs.getString(_key);
     if (raw == null) return GameSettings.defaults;
-    try { return GameSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>); }
-    catch (_) { return GameSettings.defaults; }
+    try {
+      return GameSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return GameSettings.defaults;
+    }
   }
 
   Future<void> save(GameSettings settings) async {

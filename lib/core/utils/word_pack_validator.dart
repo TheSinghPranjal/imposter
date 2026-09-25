@@ -15,12 +15,16 @@ class WordPackValidator {
   void validate(List<WordEntry> entries, {required bool throwOnError}) {
     final errors = <String>[];
     if (entries.length != GameConstants.expectedWordCount) {
-      errors.add('Expected ${GameConstants.expectedWordCount} words, got ${entries.length}.');
+      errors.add(
+        'Expected ${GameConstants.expectedWordCount} words, got ${entries.length}.',
+      );
     }
     for (final d in Difficulty.values) {
       final count = entries.where((e) => e.difficulty == d).length;
       if (count != GameConstants.expectedPerDifficulty) {
-        errors.add('Expected ${GameConstants.expectedPerDifficulty} ${d.name}, got $count.');
+        errors.add(
+          'Expected ${GameConstants.expectedPerDifficulty} ${d.name}, got $count.',
+        );
       }
     }
     final ids = <String>{};
