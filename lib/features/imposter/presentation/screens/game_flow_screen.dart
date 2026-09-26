@@ -163,7 +163,7 @@ class _HomeView extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onHowTo;
 
-  static const _background = 'assets/images/home_background.png';
+  static const _background = 'assets/images/home_background.webp';
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +320,7 @@ class _PlayerSetupView extends StatelessWidget {
     const ink = AppColors.deepPurple;
 
     return _SignboardScaffold(
-      image: 'assets/images/players_background.png',
+      image: 'assets/images/players_background.webp',
       imageSize: const Size(857, 1835),
       artBottom: 385,
       onBack: onBack,
@@ -700,7 +700,7 @@ class _ConfigurationView extends StatelessWidget {
     final count = settings.imposterCount;
 
     return _SignboardScaffold(
-      image: 'assets/images/ready_background.png',
+      image: 'assets/images/ready_background.webp',
       imageSize: const Size(866, 1815),
       artBottom: 445,
       onBack: ctrl.editPlayers,
@@ -1128,7 +1128,7 @@ class _RevealView extends StatelessWidget {
     final revealed = session.isCardRevealed;
 
     return _SignboardScaffold(
-      image: 'assets/images/your_turn_background.png',
+      image: 'assets/images/your_turn_background.webp',
       imageSize: const Size(886, 1776),
       artBottom: 0,
       children: [
@@ -1275,7 +1275,7 @@ class _PassPhoneView extends StatelessWidget {
     }
 
     return _SignboardScaffold(
-      image: 'assets/images/pass_phone_background.png',
+      image: 'assets/images/pass_phone_background.webp',
       imageSize: const Size(867, 1815),
       // Below the paws handing over the phone.
       artBottom: 1020,
@@ -1437,7 +1437,7 @@ class _AllRevealedView extends StatelessWidget {
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
     return _SignboardScaffold(
-      image: 'assets/images/your_turn_background.png',
+      image: 'assets/images/your_turn_background.webp',
       imageSize: const Size(886, 1776),
       artBottom: 0,
       children: [
@@ -1533,7 +1533,7 @@ class _RoundReadyView extends StatelessWidget {
     final starter = session.startingPlayer;
     final size = MediaQuery.of(context).size;
     return _SignboardScaffold(
-      image: 'assets/images/round_background.png',
+      image: 'assets/images/round_background.webp',
       imageSize: const Size(871, 1805),
       artBottom: 0,
       children: [
