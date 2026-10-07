@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'core/constants/ad_config.dart';
 import 'features/imposter/data/repositories/settings_repository.dart';
 import 'features/imposter/presentation/providers/game_controller.dart';
+import 'services/ads/ads_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,11 +17,21 @@ Future<void> main() async {
     final license = await rootBundle.loadString('assets/fonts/OFL.txt');
     yield LicenseEntryWithLineBreaks(['Nunito'], license);
   });
+  await AdConfig.load();
+  final ads = AdConfig.adsSupported
+      ? MobileAdsService(isTestMode: AdConfig.isTestMode)
+      : FakeAdsService();
+  // UMP consent runs inside initialize(), before MobileAds.initialize().
+  await ads.initialize();
+
   final prefs = await SharedPreferences.getInstance();
   final settingsRepo = SettingsRepository(prefs);
 
   final container = ProviderContainer(
-    overrides: [settingsRepositoryProvider.overrideWithValue(settingsRepo)],
+    overrides: [
+      settingsRepositoryProvider.overrideWithValue(settingsRepo),
+      adsServiceProvider.overrideWithValue(ads),
+    ],
   );
 
   await container.read(gameControllerProvider.notifier).bootstrap();

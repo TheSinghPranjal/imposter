@@ -21,4 +21,12 @@ class GameConstants {
 
   static String get bestWithLabel =>
       'Best with $recommendedMin–$recommendedMax players';
+
+  /// Show an interstitial only on every Nth Again tap between rounds.
+  static const int interstitialEveryNRounds = 4;
+
+  /// Extra quiet period so several fast rounds cannot stack interstitials.
+  static const Duration interstitialMinimumInterval = Duration(seconds: 90);
+
+  static const double bannerAdHeight = 50;
 }
