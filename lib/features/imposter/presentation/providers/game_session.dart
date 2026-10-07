@@ -18,6 +18,7 @@ class GameSession extends Equatable {
     this.privacyLocked = false,
     this.errorMessage,
     this.wordsReady = false,
+    this.roundsCompleted = 0,
   });
 
   final GamePhase phase;
@@ -30,6 +31,9 @@ class GameSession extends Equatable {
   final bool privacyLocked;
   final String? errorMessage;
   final bool wordsReady;
+
+  /// Rounds that reached the between-rounds screen in this session.
+  final int roundsCompleted;
 
   Player? get currentPlayer {
     if (players.isEmpty) return null;
@@ -64,6 +68,7 @@ class GameSession extends Equatable {
     String? errorMessage,
     bool clearError = false,
     bool? wordsReady,
+    int? roundsCompleted,
   }) {
     return GameSession(
       phase: phase ?? this.phase,
@@ -76,6 +81,7 @@ class GameSession extends Equatable {
       privacyLocked: privacyLocked ?? this.privacyLocked,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       wordsReady: wordsReady ?? this.wordsReady,
+      roundsCompleted: roundsCompleted ?? this.roundsCompleted,
     );
   }
 
@@ -91,5 +97,6 @@ class GameSession extends Equatable {
     privacyLocked,
     errorMessage,
     wordsReady,
+    roundsCompleted,
   ];
 }

@@ -23,4 +23,9 @@ extension GamePhaseX on GamePhase {
 
   bool get showsSecret =>
       this == GamePhase.revealing || this == GamePhase.revealed;
+
+  /// Banners are limited to the home menu and the between-rounds screen.
+  /// The pass-the-phone role reveal must never reserve or request an ad.
+  bool get showsBanner =>
+      this == GamePhase.home || this == GamePhase.roundReady;
 }

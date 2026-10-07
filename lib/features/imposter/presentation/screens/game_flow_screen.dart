@@ -8,6 +8,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/game_constants.dart';
 import '../../../../core/utils/haptic_service.dart';
 import '../../../../core/widgets/party_widgets.dart';
+import '../../../../services/ads/ads_service.dart';
+import '../../../../services/ads/banner_ad_slot.dart';
 import '../../domain/enums/app_theme_mode.dart';
 import '../../domain/enums/difficulty.dart';
 import '../../domain/enums/game_phase.dart';
@@ -100,6 +102,20 @@ class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
   }
 
   Widget _buildBody(GameSession session, GameController ctrl) {
+    final body = _phaseBody(session, ctrl);
+    // Home menu and the between-rounds screen only. Reveal phases, including
+    // pass-the-phone and the secret card, never get a banner.
+    if (!session.phase.showsBanner) return body;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: body),
+        const BannerAdSlot(),
+      ],
+    );
+  }
+
+  Widget _phaseBody(GameSession session, GameController ctrl) {
     switch (session.phase) {
       case GamePhase.splash:
         return const Center(child: CircularProgressIndicator());
@@ -1746,6 +1762,7 @@ class _SettingsView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              const _AdPrivacySection(),
               SecondaryButton(
                 label: 'RESET SETTINGS',
                 onPressed: ctrl.resetSettings,
@@ -1759,6 +1776,53 @@ class _SettingsView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shown only when UMP requires a privacy-options entry point.
+class _AdPrivacySection extends ConsumerStatefulWidget {
+  const _AdPrivacySection();
+
+  @override
+  ConsumerState<_AdPrivacySection> createState() => _AdPrivacySectionState();
+}
+
+class _AdPrivacySectionState extends ConsumerState<_AdPrivacySection> {
+  late final Future<bool> _required;
+
+  @override
+  void initState() {
+    super.initState();
+    _required = ref.read(adsServiceProvider).privacyOptionsRequired;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = Theme.of(context).colorScheme.onSurface;
+    return FutureBuilder<bool>(
+      future: _required,
+      builder: (context, snapshot) {
+        if (snapshot.data != true) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('ADS', style: AppTextStyles.label(on.withValues(alpha: 0.55))),
+            const SizedBox(height: 8),
+            GlowCard(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Ad privacy choices'),
+                subtitle: const Text('Manage how ads are personalized'),
+                onTap: () {
+                  ref.read(adsServiceProvider).showPrivacyOptions();
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 }

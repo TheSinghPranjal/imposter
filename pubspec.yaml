@@ -1,7 +1,7 @@
 name: imposter
 description: Find the Imposter — a playful pass-the-phone social deduction party game.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.3
@@ -16,6 +16,7 @@ dependencies:
   uuid: ^4.5.1
   flutter_animate: ^4.5.2
   equatable: ^2.0.7
+  google_mobile_ads: ^5.3.1
 
 dev_dependencies:
   flutter_test:
@@ -29,6 +30,7 @@ flutter:
     - assets/data/imposter_words.json
     - assets/images/
     - assets/fonts/OFL.txt
+    - config/admob.json
   fonts:
     - family: Nunito
       fonts:

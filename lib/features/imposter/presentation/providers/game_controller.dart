@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/constants/game_constants.dart';
 import '../../../../core/utils/player_validation.dart';
 import '../../../../core/utils/round_generator.dart';
+import '../../../../services/ads/ads_service.dart';
+import '../../ads/interstitial_policy.dart';
 import '../../data/repositories/asset_word_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/entities/game_settings.dart';
@@ -27,6 +29,7 @@ final gameControllerProvider =
       return GameController(
         wordRepository: ref.watch(wordRepositoryProvider),
         settingsRepository: ref.watch(settingsRepositoryProvider),
+        adsService: ref.watch(adsServiceProvider),
       );
     });
 
@@ -36,16 +39,24 @@ class GameController extends StateNotifier<GameSession> {
     SettingsRepository? settingsRepository,
     RoundGenerator? roundGenerator,
     Uuid? uuid,
+    AdsService? adsService,
+    DateTime Function()? now,
   }) : _words = wordRepository,
        _settingsRepo = settingsRepository,
        _generator = roundGenerator ?? RoundGenerator(),
        _uuid = uuid ?? const Uuid(),
+       _ads = adsService ?? FakeAdsService(),
+       _now = now ?? DateTime.now,
        super(const GameSession());
 
   final WordRepository _words;
   final SettingsRepository? _settingsRepo;
   final RoundGenerator _generator;
   final Uuid _uuid;
+  final AdsService _ads;
+  final DateTime Function() _now;
+  DateTime? _lastInterstitialAt;
+  bool _startingNextRound = false;
 
   Future<void> bootstrap() async {
     final saved = _settingsRepo?.load() ?? GameSettings.defaults;
@@ -307,11 +318,41 @@ class GameController extends StateNotifier<GameSession> {
   }
 
   void showRoundReady() {
-    state = state.copyWith(phase: GamePhase.roundReady, isCardRevealed: false);
+    final completed = state.phase == GamePhase.roundReady
+        ? state.roundsCompleted
+        : state.roundsCompleted + 1;
+    state = state.copyWith(
+      phase: GamePhase.roundReady,
+      isCardRevealed: false,
+      roundsCompleted: completed,
+    );
   }
 
+  /// Starts another round from the between-rounds screen.
+  ///
+  /// A frequency-capped interstitial may play first. It is never requested
+  /// from the pass-the-phone reveal flow, and the next secret is dealt only
+  /// after the ad has finished or been skipped.
   Future<void> startNextRound() async {
-    await startRound();
+    if (_startingNextRound) return;
+    _startingNextRound = true;
+    try {
+      final betweenRounds =
+          state.phase == GamePhase.roundReady && !state.phase.isRevealFlow;
+      if (betweenRounds &&
+          InterstitialPolicy.shouldShow(
+            fromNextRound: true,
+            roundsPlayed: state.roundsCompleted,
+            lastShownAt: _lastInterstitialAt,
+            now: _now(),
+          )) {
+        final shown = await _ads.showInterstitial();
+        if (shown) _lastInterstitialAt = _now();
+      }
+      await startRound();
+    } finally {
+      _startingNextRound = false;
+    }
   }
 
   void exitRound() {
